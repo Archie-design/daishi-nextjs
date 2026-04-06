@@ -1,5 +1,11 @@
 import nodemailer from 'nodemailer';
 
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+}
+
 function getTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
@@ -40,7 +46,7 @@ export async function sendLowRatingAlert(payload: LowRatingAlertPayload): Promis
         <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
           <tr><td style="padding:6px 0;color:#666;">評論者</td><td><strong>${payload.reviewer}</strong></td></tr>
           <tr><td style="padding:6px 0;color:#666;">評分</td><td><strong>${stars}（${payload.rating} 星）</strong></td></tr>
-          <tr><td style="padding:6px 0;color:#666;">時間</td><td>${payload.date}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">時間</td><td>${formatDate(payload.date)}</td></tr>
         </table>
         <div style="background:#fff3cd;padding:12px 16px;border-radius:6px;margin-bottom:20px;">
           <strong>評論內容：</strong><br/><br/>

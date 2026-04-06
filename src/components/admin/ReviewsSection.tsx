@@ -127,7 +127,9 @@ export default function ReviewsSection() {
                   {r.text && (
                     <p className="text-sm text-[var(--muted)] leading-relaxed mb-2">{r.text}</p>
                   )}
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{r.date}</p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    {new Date(r.date).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}
+                  </p>
                 </div>
               ))}
             </div>

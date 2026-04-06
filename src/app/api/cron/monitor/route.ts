@@ -45,7 +45,7 @@ async function fetchReviewsFromBusinessProfile(): Promise<ReviewRow[]> {
     reviewer: r.reviewer.displayName,
     rating: starMap[r.starRating] ?? 0,
     text: r.comment ?? '',
-    date: new Date(r.createTime).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+    date: new Date(r.createTime).toISOString(),
     replied: !!r.reviewReply,
     alertSent: false,
   }));
@@ -79,7 +79,7 @@ async function fetchReviewsFromPlaces(): Promise<ReviewRow[]> {
       reviewer: r.author_name,
       rating: r.rating,
       text: r.text ?? '',
-      date: new Date(r.time * 1000).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+      date: new Date(r.time * 1000).toISOString(),
       replied: false,   // Places API 無法得知是否已回覆
       alertSent: false,
     };
