@@ -17,6 +17,7 @@ export default function ReviewForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [restored, setRestored] = useState(false);
 
   useEffect(() => {
     fetch('/api/options')
@@ -24,6 +25,19 @@ export default function ReviewForm() {
       .then((data: Options) => {
         setOptions(data);
         setTone(data.tones[0] ?? '');
+        // 還原上次生成結果
+        try {
+          const saved = localStorage.getItem('daishi_last_reviews');
+          if (saved) {
+            const parsed: string[] = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setReviews(parsed);
+              setRestored(true);
+            }
+          }
+        } catch {
+          // ignore
+        }
       });
   }, []);
 
@@ -51,6 +65,8 @@ export default function ReviewForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setReviews(data.reviews);
+      setRestored(false);
+      try { localStorage.setItem('daishi_last_reviews', JSON.stringify(data.reviews)); } catch { /* ignore */ }
       setTimeout(() => {
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -223,6 +239,17 @@ export default function ReviewForm() {
         {/* 結果 */}
         {reviews.length > 0 && (
           <section id="results" className="fade-in mt-2">
+            {restored && (
+              <div className="flex items-center justify-between rounded-lg px-3 py-2 mb-3 text-xs"
+                style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}>
+                <span>已還原上次生成的評論草稿</span>
+                <button
+                  onClick={() => { setReviews([]); setRestored(false); localStorage.removeItem('daishi_last_reviews'); }}
+                  className="ml-2 opacity-60 hover:opacity-100 transition-opacity">
+                  ✕ 清除
+                </button>
+              </div>
+            )}
             <h2 className="text-xl font-semibold mb-4 text-yellow-400">
               👉 幫你整理好的評論{' '}
               <span className="text-sm font-normal text-[var(--muted)]">（可選擇 / 可修改）</span>

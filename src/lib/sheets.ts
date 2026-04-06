@@ -171,6 +171,23 @@ export async function appendReview(row: ReviewRow): Promise<void> {
   });
 }
 
+export async function markReplied(reviewId: string): Promise<void> {
+  const sheets = await getSheets();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Reviews!A:G',
+  });
+  const rows = res.data.values ?? [];
+  const rowIndex = rows.findIndex((r) => r[0] === reviewId);
+  if (rowIndex === -1) return;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `Reviews!F${rowIndex + 1}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [['TRUE']] },
+  });
+}
+
 export async function markAlertSent(reviewId: string): Promise<void> {
   const sheets = await getSheets();
   const res = await sheets.spreadsheets.values.get({
