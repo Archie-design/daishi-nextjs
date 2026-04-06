@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bg-color: #0f1115;
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --border-color: rgba(255, 255, 255, 0.2);
+  --primary: #0080FF;
+  --accent: #20B2AA;
+  --muted: #94A3B8;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-color);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(0, 128, 255, 0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(32, 178, 170, 0.15) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #ffffff;
+  min-height: 100vh;
 }
+
+/* 玻璃卡片 */
+.glass-card {
+  background: linear-gradient(135deg, var(--card-bg), rgba(255,255,255,0.02));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+}
+
+/* 選項按鈕 */
+.option-pill {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.option-pill:hover { background: rgba(255,255,255,0.1); }
+.option-pill.selected-radio {
+  background: rgba(59,130,246,0.2);
+  border-color: var(--primary);
+  color: #60a5fa;
+}
+.option-pill.selected-check {
+  background: rgba(16,185,129,0.2);
+  border-color: var(--accent);
+  color: #34d399;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeInUp 0.5s ease; }
