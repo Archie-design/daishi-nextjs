@@ -9,6 +9,7 @@ export default function ReviewForm() {
   const [options, setOptions] = useState<Options | null>(null);
   const [service, setService] = useState('');
   const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
   const [satisfactions, setSatisfactions] = useState<string[]>([]);
   const [tone, setTone] = useState('');
   const [supplement, setSupplement] = useState('');
@@ -45,7 +46,7 @@ export default function ReviewForm() {
       const res = await fetch('/api/reviews/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service, brand, satisfactions, tone, supplement }),
+        body: JSON.stringify({ service, brand, model, satisfactions, tone, supplement }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -134,6 +135,19 @@ export default function ReviewForm() {
                 {b}
               </button>
             ))}
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm text-[var(--muted)] mb-1.5">
+              手機型號 <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700/60 ml-1">選填</span>
+            </label>
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="例如：iPhone 15 Pro、Galaxy S24"
+              className="w-full rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)' }}
+            />
           </div>
         </section>
 
