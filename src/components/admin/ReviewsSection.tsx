@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react';
 import type { ReviewRow } from '@/lib/sheets';
 
 const STARS: Record<number, string> = { 1: '★☆☆☆☆', 2: '★★☆☆☆', 3: '★★★☆☆', 4: '★★★★☆', 5: '★★★★★' };
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+}
 const RATING_COLOR: Record<number, string> = { 1: '#ef4444', 2: '#f97316', 3: '#eab308', 4: '#84cc16', 5: '#22c55e' };
 
 export default function ReviewsSection() {
@@ -128,7 +134,7 @@ export default function ReviewsSection() {
                     <p className="text-sm text-[var(--muted)] leading-relaxed mb-2">{r.text}</p>
                   )}
                   <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    {new Date(r.date).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}
+                    {formatDate(r.date)}
                   </p>
                 </div>
               ))}
