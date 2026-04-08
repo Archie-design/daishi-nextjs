@@ -7,7 +7,11 @@
       "Bash(node -e \"require\\('nodemailer'\\); console.log\\('ok'\\)\")",
       "Bash(timeout 15 node -e ':*)",
       "Bash(curl -s -X GET https://daishi-nextjs.vercel.app/api/cron/monitor -H 'Authorization: Bearer UZ08wzO7UCUxIsMg8SQ9G77EvFWPJ2uTVrx4KHcG79E=')",
-      "Bash(python3 -m json.tool)"
+      "Bash(python3 -m json.tool)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
