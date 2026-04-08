@@ -53,7 +53,7 @@ export async function generateReviews(formData: ReviewFormData): Promise<string[
     ];
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${API_KEY}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -93,7 +93,7 @@ export async function generateReplyDrafts(reviewText: string, rating: number): P
 顧客評論內容：
 「${reviewText}」`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${API_KEY}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -119,7 +119,7 @@ export async function generateWeeklySummary(reviews: { text: string; rating: num
 
   const prompt = `以下是大師修桃園店本週收到的 Google 評論，請用一句話（30字以內）摘要本週整體顧客感受：\n\n${reviewsList}`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${API_KEY}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
