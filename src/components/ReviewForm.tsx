@@ -133,43 +133,8 @@ export default function ReviewForm() {
       <main className="space-y-5">
         {/* Section 1 */}
         <section className="glass-card p-6">
-          <label className="block text-lg font-semibold mb-1">
-            ① 今日服務項目 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
-          </label>
-          <p className="text-xs text-[var(--muted)] mb-3">請選擇今天的服務：</p>
-          <div className="flex flex-wrap gap-2">
-            {options.services.map((s) => (
-              <button key={s} type="button"
-                className={`option-pill ${service === s ? 'selected-radio' : ''}`}
-                onClick={() => setService(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Section 2 */}
-        <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-3">
-            ② 今天維修產品{' '}
-            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
-            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {(options.repairProducts ?? []).map((p) => (
-              <button key={p} type="button"
-                className={`option-pill ${repairProducts.includes(p) ? 'selected-check' : ''}`}
-                onClick={() => toggleRepairProduct(p)}>
-                {p}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Section 3 */}
-        <section className="glass-card p-6">
-          <label className="block text-lg font-semibold mb-3">
-            ③ 手機品牌 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            ① 維修品牌 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {options.brands.map((b) => (
@@ -192,6 +157,41 @@ export default function ReviewForm() {
               className="w-full rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
               style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)' }}
             />
+          </div>
+        </section>
+
+        {/* Section 2 */}
+        <section className="glass-card p-6">
+          <label className="block text-lg font-semibold mb-1">
+            ② 今天服務項目 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+          </label>
+          <p className="text-xs text-[var(--muted)] mb-3">請選擇今天的服務：</p>
+          <div className="flex flex-wrap gap-2">
+            {options.services.map((s) => (
+              <button key={s} type="button"
+                className={`option-pill ${service === s ? 'selected-radio' : ''}`}
+                onClick={() => setService(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 3 */}
+        <section className="glass-card p-6">
+          <label className="block text-lg font-semibold mb-3">
+            ③ 今天維修產品{' '}
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(options.repairProducts ?? []).map((p) => (
+              <button key={p} type="button"
+                className={`option-pill ${repairProducts.includes(p) ? 'selected-check' : ''}`}
+                onClick={() => toggleRepairProduct(p)}>
+                {p}
+              </button>
+            ))}
           </div>
         </section>
 
