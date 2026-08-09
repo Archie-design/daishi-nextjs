@@ -5,6 +5,7 @@ const SHEET_ID = process.env.GOOGLE_SHEETS_ID!;
 
 export interface Options {
   services: string[];
+  repairProducts: string[];
   brands: string[];
   satisfactions: string[];
   tones: string[];
@@ -33,6 +34,7 @@ const DEFAULT_OPTIONS: Options = {
     '二手機回收',
     '配件購買',
   ],
+  repairProducts: ['電池', '螢幕', '主機板', '相機鏡頭', '充電孔', '揚聲器', '按鍵', '其他'],
   brands: ['Apple', 'Samsung', 'OPPO', 'ASUS', 'Vivo', 'Xiaomi', 'Huawei', 'Google', 'Sony', '其他'],
   satisfactions: [
     '維修速度快',

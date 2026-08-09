@@ -1,5 +1,6 @@
 export interface ReviewFormData {
   service: string;
+  repairProducts: string[];
   brand: string;
   model?: string;
   satisfactions: string[];
@@ -80,10 +81,11 @@ function mockReviews(formData: ReviewFormData): string[] {
     formData.satisfactions.length > 0
       ? `，尤其是${formData.satisfactions.join('跟')}`
       : '';
+  const products = formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : formData.service;
   return [
-    `今天來大師修換${formData.brand}${formData.model ? ` ${formData.model}` : ''}的${formData.service}${sat}，整體很滿意！${formData.supplement ?? ''}`,
-    `第一次拿${formData.brand}來大師修體驗${formData.service}，店員服務態度很好，推薦給大家。${formData.supplement ?? ''}`,
-    `感謝大師修幫我做${formData.service}${sat}，${formData.supplement || '下次手機有問題還會想來這裡修！'}`,
+    `今天來大師修換${formData.brand}${formData.model ? ` ${formData.model}` : ''}的${products}${sat}，整體很滿意！${formData.supplement ?? ''}`,
+    `第一次拿${formData.brand}來大師修體驗${formData.service}（處理了${products}），店員服務態度很好，推薦給大家。${formData.supplement ?? ''}`,
+    `感謝大師修幫我處理${products}${sat}，${formData.supplement || '下次手機有問題還會想來這裡修！'}`,
   ];
 }
 
@@ -100,8 +102,12 @@ export async function generateReviews(formData: ReviewFormData): Promise<string[
     ? `${formData.brand}（${formData.model}）`
     : formData.brand;
 
+  const repairProductsText =
+    formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : '無特別指定';
+
   const userPrompt = `
 服務項目：${formData.service}
+今天維修的產品/部位：${repairProductsText}
 手機品牌與型號：${brandText}
 最滿意的地方：${satisfactionsText}
 想要的評論語氣：${formData.tone}

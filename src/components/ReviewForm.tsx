@@ -8,6 +8,7 @@ import CopySuccessModal from './CopySuccessModal';
 export default function ReviewForm() {
   const [options, setOptions] = useState<Options | null>(null);
   const [service, setService] = useState('');
+  const [repairProducts, setRepairProducts] = useState<string[]>([]);
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [satisfactions, setSatisfactions] = useState<string[]>([]);
@@ -49,8 +50,17 @@ export default function ReviewForm() {
     });
   }
 
+  function toggleRepairProduct(val: string) {
+    setRepairProducts((prev) => {
+      if (prev.includes(val)) return prev.filter((p) => p !== val);
+      if (prev.length >= 3) return prev;
+      return [...prev, val];
+    });
+  }
+
   async function handleGenerate() {
     if (!service) { setError('請先選擇「今日服務項目」'); return; }
+    if (repairProducts.length === 0) { setError('請先選擇「今天維修產品」'); return; }
     if (!brand)   { setError('請先選擇「手機品牌」'); return; }
     setError('');
     setLoading(true);
@@ -60,7 +70,7 @@ export default function ReviewForm() {
       const res = await fetch('/api/reviews/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service, brand, model, satisfactions, tone, supplement }),
+        body: JSON.stringify({ service, repairProducts, brand, model, satisfactions, tone, supplement }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -141,7 +151,25 @@ export default function ReviewForm() {
         {/* Section 2 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-3">
-            ② 手機品牌 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            ② 今天維修產品{' '}
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(options.repairProducts ?? []).map((p) => (
+              <button key={p} type="button"
+                className={`option-pill ${repairProducts.includes(p) ? 'selected-check' : ''}`}
+                onClick={() => toggleRepairProduct(p)}>
+                {p}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 3 */}
+        <section className="glass-card p-6">
+          <label className="block text-lg font-semibold mb-3">
+            ③ 手機品牌 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {options.brands.map((b) => (
@@ -167,10 +195,10 @@ export default function ReviewForm() {
           </div>
         </section>
 
-        {/* Section 3 */}
+        {/* Section 4 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-3">
-            ③ 今天最滿意的地方{' '}
+            ④ 今天最滿意的地方{' '}
             <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
           </label>
           <div className="flex flex-wrap gap-2">
@@ -184,10 +212,10 @@ export default function ReviewForm() {
           </div>
         </section>
 
-        {/* Section 4 */}
+        {/* Section 5 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-3">
-            ④ 想要的評論語氣 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            ⑤ 想要的評論語氣 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {options.tones.map((t, i) => (
@@ -203,10 +231,10 @@ export default function ReviewForm() {
           </div>
         </section>
 
-        {/* Section 5 */}
+        {/* Section 6 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-1" htmlFor="supplement">
-            ⑤ 補充一句話{' '}
+            ⑥ 補充一句話{' '}
             <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">選填</span>
           </label>
           <p className="text-xs text-[var(--muted)] mb-3">👉 讓評論更像你的真實感受（可不填）</p>
