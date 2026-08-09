@@ -80,10 +80,10 @@ export default function AdminPanel() {
 
       <OptionsSection label="① 維修品牌" items={options.brands}
         onChange={(v) => setOptions({ ...options, brands: v })} />
-      <OptionsSection label="② 今天服務項目" items={options.services}
-        onChange={(v) => setOptions({ ...options, services: v })} />
-      <OptionsSection label="③ 今天維修產品" items={options.repairProducts ?? []}
+      <OptionsSection label="② 今天維修產品" items={options.repairProducts ?? []}
         onChange={(v) => setOptions({ ...options, repairProducts: v })} />
+      <OptionsSection label="③ 今天服務項目" items={options.services}
+        onChange={(v) => setOptions({ ...options, services: v })} />
       <OptionsSection label="④ 今天最滿意的地方" items={options.satisfactions}
         onChange={(v) => setOptions({ ...options, satisfactions: v })} />
       <OptionsSection label="⑤ 想要的評論語氣" items={options.tones}
