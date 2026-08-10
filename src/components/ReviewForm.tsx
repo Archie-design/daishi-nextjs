@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import type { Options } from '@/lib/sheets';
 import ReviewCard from './ReviewCard';
 import CopySuccessModal from './CopySuccessModal';
 
 export default function ReviewForm() {
   const [options, setOptions] = useState<Options | null>(null);
-  const [service, setService] = useState('');
+  const [services, setServices] = useState<string[]>([]);
   const [repairProducts, setRepairProducts] = useState<string[]>([]);
-  const [brand, setBrand] = useState('');
+  const [brands, setBrands] = useState<string[]>([]);
   const [model, setModel] = useState('');
   const [satisfactions, setSatisfactions] = useState<string[]>([]);
-  const [tone, setTone] = useState('');
+  const [tones, setTones] = useState<string[]>([]);
   const [supplement, setSupplement] = useState('');
   const [reviews, setReviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function ReviewForm() {
       .then((r) => r.json())
       .then((data: Options) => {
         setOptions(data);
-        setTone(data.tones[0] ?? '');
+        setTones(data.tones[0] ? [data.tones[0]] : []);
         // 還原上次生成結果
         try {
           const saved = localStorage.getItem('daishi_last_reviews');
@@ -42,26 +42,28 @@ export default function ReviewForm() {
       });
   }, []);
 
-  function toggleSatisfaction(val: string) {
-    setSatisfactions((prev) => {
-      if (prev.includes(val)) return prev.filter((s) => s !== val);
-      if (prev.length >= 3) return prev;
-      return [...prev, val];
-    });
+  // 多選 pill 共用邏輯：已選則移除，未選則加入（上限 3 個）
+  function toggleIn(setter: Dispatch<SetStateAction<string[]>>) {
+    return (val: string) => {
+      setter((prev) => {
+        if (prev.includes(val)) return prev.filter((v) => v !== val);
+        if (prev.length >= 3) return prev;
+        return [...prev, val];
+      });
+    };
   }
 
-  function toggleRepairProduct(val: string) {
-    setRepairProducts((prev) => {
-      if (prev.includes(val)) return prev.filter((p) => p !== val);
-      if (prev.length >= 3) return prev;
-      return [...prev, val];
-    });
-  }
+  const toggleBrand = toggleIn(setBrands);
+  const toggleRepairProduct = toggleIn(setRepairProducts);
+  const toggleService = toggleIn(setServices);
+  const toggleSatisfaction = toggleIn(setSatisfactions);
+  const toggleTone = toggleIn(setTones);
 
   async function handleGenerate() {
-    if (!service) { setError('請先選擇「今日服務項目」'); return; }
+    if (brands.length === 0) { setError('請先選擇「維修品牌」'); return; }
     if (repairProducts.length === 0) { setError('請先選擇「今天維修產品」'); return; }
-    if (!brand)   { setError('請先選擇「手機品牌」'); return; }
+    if (services.length === 0) { setError('請先選擇「今天服務項目」'); return; }
+    if (tones.length === 0) { setError('請先選擇「想要的評論語氣」'); return; }
     setError('');
     setLoading(true);
     setReviews([]);
@@ -70,7 +72,7 @@ export default function ReviewForm() {
       const res = await fetch('/api/reviews/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service, repairProducts, brand, model, satisfactions, tone, supplement }),
+        body: JSON.stringify({ services, repairProducts, brands, model, satisfactions, tones, supplement }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -134,13 +136,15 @@ export default function ReviewForm() {
         {/* Section 1 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-3">
-            ① 維修品牌 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            ① 維修品牌{' '}
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {options.brands.map((b) => (
               <button key={b} type="button"
-                className={`option-pill ${brand === b ? 'selected-radio' : ''}`}
-                onClick={() => setBrand(b)}>
+                className={`option-pill ${brands.includes(b) ? 'selected-check' : ''}`}
+                onClick={() => toggleBrand(b)}>
                 {b}
               </button>
             ))}
@@ -181,14 +185,16 @@ export default function ReviewForm() {
         {/* Section 3 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-1">
-            ③ 今天服務項目 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            ③ 今天服務項目{' '}
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
           </label>
           <p className="text-xs text-[var(--muted)] mb-3">請選擇今天的服務：</p>
           <div className="flex flex-wrap gap-2">
             {options.services.map((s) => (
               <button key={s} type="button"
-                className={`option-pill ${service === s ? 'selected-radio' : ''}`}
-                onClick={() => setService(s)}>
+                className={`option-pill ${services.includes(s) ? 'selected-check' : ''}`}
+                onClick={() => toggleService(s)}>
                 {s}
               </button>
             ))}
@@ -215,13 +221,15 @@ export default function ReviewForm() {
         {/* Section 5 */}
         <section className="glass-card p-6">
           <label className="block text-lg font-semibold mb-3">
-            ⑤ 想要的評論語氣 <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            ⑤ 想要的評論語氣{' '}
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ml-1">必選</span>
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {options.tones.map((t, i) => (
               <button key={t} type="button"
-                className={`option-pill ${tone === t ? 'selected-radio' : ''}`}
-                onClick={() => setTone(t)}>
+                className={`option-pill ${tones.includes(t) ? 'selected-check' : ''}`}
+                onClick={() => toggleTone(t)}>
                 {t}
                 {i === 0 && (
                   <span className="ml-1 text-xs bg-[var(--primary)] text-white px-1 py-0.5 rounded">推薦</span>

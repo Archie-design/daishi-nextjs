@@ -1,10 +1,10 @@
 export interface ReviewFormData {
-  service: string;
+  services: string[];
   repairProducts: string[];
-  brand: string;
+  brands: string[];
   model?: string;
   satisfactions: string[];
-  tone: string;
+  tones: string[];
   supplement: string;
 }
 
@@ -81,10 +81,12 @@ function mockReviews(formData: ReviewFormData): string[] {
     formData.satisfactions.length > 0
       ? `，尤其是${formData.satisfactions.join('跟')}`
       : '';
-  const products = formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : formData.service;
+  const brandText = formData.brands.join('、');
+  const serviceText = formData.services.join('、');
+  const products = formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : serviceText;
   return [
-    `今天來大師修換${formData.brand}${formData.model ? ` ${formData.model}` : ''}的${products}${sat}，整體很滿意！${formData.supplement ?? ''}`,
-    `第一次拿${formData.brand}來大師修體驗${formData.service}（處理了${products}），店員服務態度很好，推薦給大家。${formData.supplement ?? ''}`,
+    `今天來大師修換${brandText}${formData.model ? ` ${formData.model}` : ''}的${products}${sat}，整體很滿意！${formData.supplement ?? ''}`,
+    `第一次拿${brandText}來大師修體驗${serviceText}（處理了${products}），店員服務態度很好，推薦給大家。${formData.supplement ?? ''}`,
     `感謝大師修幫我處理${products}${sat}，${formData.supplement || '下次手機有問題還會想來這裡修！'}`,
   ];
 }
@@ -98,19 +100,22 @@ export async function generateReviews(formData: ReviewFormData): Promise<string[
       : '無特別選擇（請自由帶入）';
   const supplementText = formData.supplement || '無補充';
 
-  const brandText = formData.model
-    ? `${formData.brand}（${formData.model}）`
-    : formData.brand;
+  const brandsText = formData.model
+    ? `${formData.brands.join('、')}（${formData.model}）`
+    : formData.brands.join('、');
 
   const repairProductsText =
     formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : '無特別指定';
 
+  const servicesText = formData.services.join('、');
+  const tonesText = formData.tones.join('、');
+
   const userPrompt = `
-服務項目：${formData.service}
+服務項目：${servicesText}
 今天維修的產品/部位：${repairProductsText}
-手機品牌與型號：${brandText}
+手機品牌與型號：${brandsText}
 最滿意的地方：${satisfactionsText}
-想要的評論語氣：${formData.tone}
+想要的評論語氣：${tonesText}
 補充一句話：${supplementText}
 `;
 
