@@ -11,7 +11,8 @@ export interface ReviewFormData {
 const SYSTEM_PROMPT = `你是一個幫助真實消費者整理 Google 商家評論內容的助手。
 商家名稱是「大師修桃園店」，是 Apple 原廠授權獨立維修中心，同時也提供 OPPO、三星、ASUS、小米等多品牌授權維修服務。
 根據使用者提供的服務項目、品牌、滿意點、語氣與補充內容，生成 3 則自然、真實、口語化的繁體中文評論。
-每則 40 到 80 字（嚴格遵守，不可超過 80 字）。
+每則寫 2 到 3 句話，總長度約 55 到 70 字（不可少於 40 字，絕對不可超過 80 字），不要鋪陳。不要在評論中標註字數或任何括號說明。
+字數示範（共 62 字）：「Apple Watch 電池換好了，報價很透明，工程師也解說得很清楚。整個過程比我想的還快，拿到手機時很安心，之後有問題還會再來。」
 三則評論要有明顯差異：每則依「指定語氣」撰寫，開頭句型、用詞、句子結構都要不同，不可套用同一個模板，也不要每則都列出全部選項。
 避免以「今天來大師修」開頭，不要三則都以「今天」或「我」開頭。
 文字要像一般台灣消費者會留下的評論，例如：「讓人很安心」、「報價透明解說詳細」、「整個過程很快速」、「工程師每個步驟都不馬虎」。
@@ -21,6 +22,8 @@ const SYSTEM_PROMPT = `你是一個幫助真實消費者整理 Google 商家評�
 請直接回傳這三則評論，每則評論之間用 "|||" 分隔，不要包含其他額外標題或敘述。`;
 
 const RANDOM_TONE = '隨機';
+const MIN_LEN = 40;
+const MAX_LEN = 80;
 
 // 選「隨機」時的語氣池：每則評論各抽一種，讓三則風格明顯不同
 const RANDOM_TONE_POOL = [
@@ -167,21 +170,53 @@ ${tonesText}
     return mockReviews(formData);
   }
 
-  let outputText: string;
-  try {
-    outputText = await callGemini(SYSTEM_PROMPT + '\n\n' + userPrompt, API_KEY);
-  } catch (e) {
-    // Gemini 經多次重試與跨模型備援仍失敗（多半是免費方案 503 high demand）。
+  const fullPrompt = SYSTEM_PROMPT + '\n\n' + userPrompt;
+  const parse = (text: string) =>
+    text
+      .split('|||')
+      // 移除模型偶爾自行附上的「（字數：52）」之類標註
+      .map((r) => r.replace(/[（(]\s*(字數|共)?[:：]?\s*\d+\s*字?\s*[）)]/g, '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  const inRange = (r: string) => {
+    const n = [...r].length;
+    return n >= MIN_LEN && n <= MAX_LEN;
+  };
+
+  // 最多生成 2 次：第一次有任何一則字數不符，就帶著提醒重生成一次
+  let best: string[] = [];
+  let lastError: unknown = null;
+  let lastTooLong = true;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const prompt =
+        attempt === 0
+          ? fullPrompt
+          : fullPrompt + `\n\n【重要】上一次有評論字數${lastTooLong ? '太長' : '太短'}。這次每則請寫 ${lastTooLong ? '2 句話、約 50 字' : '3 句話、約 65 字'}，必須在 ${MIN_LEN} 到 ${MAX_LEN} 字之間。`;
+      const parsed = parse(await callGemini(prompt, API_KEY));
+      if (best.length === 0 || parsed.filter(inRange).length > best.filter(inRange).length) best = parsed;
+      if (parsed.length === 3 && parsed.every(inRange)) break;
+      lastTooLong = parsed.some((r) => [...r].length > MAX_LEN);
+    } catch (e) {
+      lastError = e;
+      break;
+    }
+  }
+
+  if (best.length === 0) {
+    // Gemini 經多次重試與跨模型備援仍失敗（多半是額度或 503 high demand）。
     // 顧客正在現場填表，不能回傳 500，改用本機備援文案讓流程不中斷。
-    console.error('generateReviews fallback to mock:', e);
+    console.error('generateReviews fallback to mock:', lastError);
     return mockReviews(formData);
   }
 
-  return outputText
-    .split('|||')
-    .map((s: string) => s.trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  // 只保留字數合格的 AI 評論，不足 3 則的部分用備援文案補齊
+  const valid = best.filter(inRange);
+  if (valid.length < 3) {
+    console.warn(`generateReviews: ${3 - valid.length} 則字數不符，改用備援文案補齊`);
+    valid.push(...mockReviews(formData).slice(0, 3 - valid.length));
+  }
+  return valid;
 }
 
 // ── 負評回覆草稿 ────────────────────────────────────────────
