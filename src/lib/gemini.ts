@@ -52,7 +52,7 @@ function assignTones(tones: string[]): string[] {
 
 // 依優先順序嘗試的模型清單。免費方案常出現 503「high demand」，
 // 改用多個模型 + 重試退避，避免單一暫時性錯誤直接回傳 500 給顧客。
-const MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-lite-latest'];
+const MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
