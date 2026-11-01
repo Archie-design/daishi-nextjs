@@ -1,3 +1,5 @@
+import { logUsage } from './sheets';
+
 export interface ReviewFormData {
   services: string[];
   repairProducts: string[];
@@ -63,7 +65,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * 呼叫 Gemini 並對「暫時性錯誤」（429/500/503）做退避重試與跨模型備援。
  * 回傳生成文字；若所有嘗試都失敗則丟出最後一個錯誤。
  */
-async function callGemini(prompt: string, apiKey: string): Promise<string> {
+interface GeminiResult {
+  text: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+async function callGemini(prompt: string, apiKey: string): Promise<GeminiResult> {
   let lastError: Error = new Error('Gemini API 呼叫失敗');
 
   for (const model of MODELS) {
@@ -94,7 +103,16 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
         const result = await res.json();
         const text: string =
           result?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        if (text) return text;
+        if (text) {
+          const u = result?.usageMetadata ?? {};
+          return {
+            text,
+            model,
+            inputTokens: Number(u.promptTokenCount ?? 0),
+            // 思考 token 也會以輸出價格計費
+            outputTokens: Number(u.candidatesTokenCount ?? 0) + Number(u.thoughtsTokenCount ?? 0),
+          };
+        }
         // 安全機制擋下或空回應 → 換下一個模型
         lastError = new Error('Gemini API 未回傳預期的文字');
         break;
@@ -167,6 +185,7 @@ ${tonesText}
   // 未設定 API Key → 回傳模擬資料
   if (!API_KEY) {
     await new Promise((r) => setTimeout(r, 1000));
+    await logUsage({ kind: 'review', model: '', result: 'mock', apiCalls: 0, inputTokens: 0, outputTokens: 0 });
     return mockReviews(formData);
   }
 
@@ -187,13 +206,22 @@ ${tonesText}
   let best: string[] = [];
   let lastError: unknown = null;
   let lastTooLong = true;
+  let usedModel = '';
+  let apiCalls = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const prompt =
         attempt === 0
           ? fullPrompt
           : fullPrompt + `\n\n【重要】上一次有評論字數${lastTooLong ? '太長' : '太短'}。這次每則請寫 ${lastTooLong ? '2 句話、約 50 字' : '3 句話、約 65 字'}，必須在 ${MIN_LEN} 到 ${MAX_LEN} 字之間。`;
-      const parsed = parse(await callGemini(prompt, API_KEY));
+      const gen = await callGemini(prompt, API_KEY);
+      apiCalls++;
+      usedModel = gen.model;
+      inputTokens += gen.inputTokens;
+      outputTokens += gen.outputTokens;
+      const parsed = parse(gen.text);
       if (best.length === 0 || parsed.filter(inRange).length > best.filter(inRange).length) best = parsed;
       if (parsed.length === 3 && parsed.every(inRange)) break;
       lastTooLong = parsed.some((r) => [...r].length > MAX_LEN);
@@ -207,6 +235,7 @@ ${tonesText}
     // Gemini 經多次重試與跨模型備援仍失敗（多半是額度或 503 high demand）。
     // 顧客正在現場填表，不能回傳 500，改用本機備援文案讓流程不中斷。
     console.error('generateReviews fallback to mock:', lastError);
+    await logUsage({ kind: 'review', model: usedModel, result: 'mock', apiCalls, inputTokens, outputTokens });
     return mockReviews(formData);
   }
 
@@ -216,6 +245,11 @@ ${tonesText}
     console.warn(`generateReviews: ${3 - valid.length} 則字數不符，改用備援文案補齊`);
     valid.push(...mockReviews(formData).slice(0, 3 - valid.length));
   }
+  await logUsage({
+    kind: 'review', model: usedModel,
+    result: valid.length === best.filter(inRange).length ? 'ai' : 'partial',
+    apiCalls, inputTokens, outputTokens,
+  });
   return valid;
 }
 
@@ -235,8 +269,11 @@ export async function generateReplyDrafts(reviewText: string, rating: number): P
 
   let text: string;
   try {
-    text = await callGemini(prompt, API_KEY);
+    const gen = await callGemini(prompt, API_KEY);
+    text = gen.text;
+    await logUsage({ kind: 'reply', model: gen.model, result: 'ai', apiCalls: 1, inputTokens: gen.inputTokens, outputTokens: gen.outputTokens });
   } catch {
+    await logUsage({ kind: 'reply', model: '', result: 'fail', apiCalls: 0, inputTokens: 0, outputTokens: 0 });
     return ['（Gemini API 呼叫失敗）'];
   }
   return text.split('|||').map((s: string) => s.trim()).filter(Boolean).slice(0, 2);
@@ -255,9 +292,11 @@ export async function generateWeeklySummary(reviews: { text: string; rating: num
   const prompt = `以下是大師修桃園店本週收到的 Google 評論，請用一句話（30字以內）摘要本週整體顧客感受：\n\n${reviewsList}`;
 
   try {
-    const text = await callGemini(prompt, API_KEY);
-    return text.trim() || '（無摘要）';
+    const gen = await callGemini(prompt, API_KEY);
+    await logUsage({ kind: 'weekly', model: gen.model, result: 'ai', apiCalls: 1, inputTokens: gen.inputTokens, outputTokens: gen.outputTokens });
+    return gen.text.trim() || '（無摘要）';
   } catch {
+    await logUsage({ kind: 'weekly', model: '', result: 'fail', apiCalls: 0, inputTokens: 0, outputTokens: 0 });
     return '（摘要產生失敗）';
   }
 }

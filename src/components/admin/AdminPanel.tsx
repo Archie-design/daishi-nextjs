@@ -7,6 +7,7 @@ import OptionsSection from './OptionsSection';
 import QRCodeSection from './QRCodeSection';
 import PasswordSection from './PasswordSection';
 import ReviewsSection from './ReviewsSection';
+import UsageSection from './UsageSection';
 
 export default function AdminPanel() {
   const [options, setOptions] = useState<Options | null>(null);
@@ -102,6 +103,7 @@ export default function AdminPanel() {
         </button>
       </div>
 
+      <UsageSection />
       <ReviewsSection />
       <QRCodeSection />
       <PasswordSection />

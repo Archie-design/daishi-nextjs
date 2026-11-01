@@ -206,3 +206,87 @@ export async function markAlertSent(reviewId: string): Promise<void> {
     requestBody: { values: [['TRUE']] },
   });
 }
+
+// ── Usage 分頁（Gemini 用量記錄）─────────────────────────────
+
+export type UsageKind = 'review' | 'reply' | 'weekly';
+export type UsageResult = 'ai' | 'partial' | 'mock' | 'fail';
+
+export interface UsageRow {
+  time: string; // ISO 8601
+  kind: UsageKind;
+  model: string;
+  result: UsageResult;
+  apiCalls: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+const USAGE_HEADER = ['time', 'kind', 'model', 'result', 'apiCalls', 'inputTokens', 'outputTokens'];
+
+async function ensureUsageSheet(): Promise<void> {
+  const sheets = await getSheets();
+  try {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: 'Usage' } } }] },
+    });
+  } catch {
+    // 已存在（並行請求同時建立）→ 忽略
+  }
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: 'Usage!A1:G1',
+    valueInputOption: 'RAW',
+    requestBody: { values: [USAGE_HEADER] },
+  });
+}
+
+/** 記錄一次 Gemini 功能呼叫。失敗只寫 log，絕不影響主流程。 */
+export async function logUsage(row: Omit<UsageRow, 'time'>): Promise<void> {
+  const values = [[
+    new Date().toISOString(), row.kind, row.model, row.result,
+    row.apiCalls, row.inputTokens, row.outputTokens,
+  ]];
+  const append = async () => {
+    const sheets = await getSheets();
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'Usage!A:G',
+      valueInputOption: 'RAW',
+      requestBody: { values },
+    });
+  };
+  try {
+    try {
+      await append();
+    } catch {
+      // 第一次使用時 Usage 工作頁尚未建立 → 自動建立後重試
+      await ensureUsageSheet();
+      await append();
+    }
+  } catch (e) {
+    console.error('logUsage failed:', e);
+  }
+}
+
+export async function getUsage(): Promise<UsageRow[]> {
+  const sheets = await getSheets();
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Usage!A2:G',
+    });
+    return (res.data.values ?? []).map((r) => ({
+      time: r[0] ?? '',
+      kind: (r[1] ?? 'review') as UsageKind,
+      model: r[2] ?? '',
+      result: (r[3] ?? 'ai') as UsageResult,
+      apiCalls: Number(r[4] ?? 0),
+      inputTokens: Number(r[5] ?? 0),
+      outputTokens: Number(r[6] ?? 0),
+    }));
+  } catch {
+    return []; // 尚無 Usage 工作頁
+  }
+}
