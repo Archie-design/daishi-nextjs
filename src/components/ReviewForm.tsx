@@ -5,6 +5,8 @@ import type { Options } from '@/lib/sheets';
 import ReviewCard from './ReviewCard';
 import CopySuccessModal from './CopySuccessModal';
 
+const RANDOM_TONE = '隨機';
+
 export default function ReviewForm() {
   const [options, setOptions] = useState<Options | null>(null);
   const [services, setServices] = useState<string[]>([]);
@@ -25,7 +27,7 @@ export default function ReviewForm() {
       .then((r) => r.json())
       .then((data: Options) => {
         setOptions(data);
-        setTones(data.tones[0] ? [data.tones[0]] : []);
+        setTones([RANDOM_TONE]);
         // 還原上次生成結果
         try {
           const saved = localStorage.getItem('daishi_last_reviews');
@@ -57,7 +59,19 @@ export default function ReviewForm() {
   const toggleRepairProduct = toggleIn(setRepairProducts);
   const toggleService = toggleIn(setServices);
   const toggleSatisfaction = toggleIn(setSatisfactions);
-  const toggleTone = toggleIn(setTones);
+  // 語氣：「隨機」與具體語氣互斥；全部取消時回到隨機
+  function toggleTone(val: string) {
+    setTones((prev) => {
+      if (val === RANDOM_TONE) return [RANDOM_TONE];
+      const base = prev.filter((v) => v !== RANDOM_TONE);
+      if (base.includes(val)) {
+        const next = base.filter((v) => v !== val);
+        return next.length === 0 ? [RANDOM_TONE] : next;
+      }
+      if (base.length >= 3) return base;
+      return [...base, val];
+    });
+  }
 
   async function handleGenerate() {
     if (brands.length === 0) { setError('請先選擇「維修品牌」'); return; }
@@ -226,14 +240,17 @@ export default function ReviewForm() {
             <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-700/60 text-[var(--muted)] ml-1">可複選 (1-3 個)</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            {options.tones.map((t, i) => (
+            <button type="button"
+              className={`option-pill ${tones.includes(RANDOM_TONE) ? 'selected-check' : ''}`}
+              onClick={() => toggleTone(RANDOM_TONE)}>
+              🎲 隨機語氣
+              <span className="ml-1 text-xs bg-[var(--primary)] text-white px-1 py-0.5 rounded">推薦</span>
+            </button>
+            {options.tones.map((t) => (
               <button key={t} type="button"
                 className={`option-pill ${tones.includes(t) ? 'selected-check' : ''}`}
                 onClick={() => toggleTone(t)}>
                 {t}
-                {i === 0 && (
-                  <span className="ml-1 text-xs bg-[var(--primary)] text-white px-1 py-0.5 rounded">推薦</span>
-                )}
               </button>
             ))}
           </div>

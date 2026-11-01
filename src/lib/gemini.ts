@@ -11,13 +11,44 @@ export interface ReviewFormData {
 const SYSTEM_PROMPT = `你是一個幫助真實消費者整理 Google 商家評論內容的助手。
 商家名稱是「大師修桃園店」，是 Apple 原廠授權獨立維修中心，同時也提供 OPPO、三星、ASUS、小米等多品牌授權維修服務。
 根據使用者提供的服務項目、品牌、滿意點、語氣與補充內容，生成 3 則自然、真實、口語化的繁體中文評論。
-每則 35 到 90 字。
-不要誇大、不虛構、不重複句型。每則評論的開頭句型要不同（避免三則都以「今天」或「我」開頭）。
+每則 40 到 80 字（嚴格遵守，不可超過 80 字）。
+三則評論要有明顯差異：每則依「指定語氣」撰寫，開頭句型、用詞、句子結構都要不同，不可套用同一個模板，也不要每則都列出全部選項。
+避免以「今天來大師修」開頭，不要三則都以「今天」或「我」開頭。
 文字要像一般台灣消費者會留下的評論，例如：「讓人很安心」、「報價透明解說詳細」、「整個過程很快速」、「工程師每個步驟都不馬虎」。
 可自然提及維修速度、服務態度、價格透明、原廠零件、保固、安心感等，但不得過度推銷。
 最後不要加 hashtag，不要加引號。
 
 請直接回傳這三則評論，每則評論之間用 "|||" 分隔，不要包含其他額外標題或敘述。`;
+
+const RANDOM_TONE = '隨機';
+
+// 選「隨機」時的語氣池：每則評論各抽一種，讓三則風格明顯不同
+const RANDOM_TONE_POOL = [
+  '簡短自然，像隨手留的一句話',
+  '真誠推薦，像在跟朋友分享',
+  '熱情滿意，語氣開心有感',
+  '專業安心，強調過程與信任感',
+  '生活化口吻，像日常聊天',
+  '平實客觀，陳述這次的經驗',
+  '感謝導向，點名感謝店員與工程師',
+  '前後對比，先說原本的擔心再說結果',
+];
+
+function pickRandom<T>(arr: T[], n: number): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return Array.from({ length: n }, (_, i) => copy[i % copy.length]);
+}
+
+// 決定三則評論各自的語氣：隨機 → 從語氣池抽；指定 → 從使用者選的語氣輪流分配（順序打亂）
+function assignTones(tones: string[]): string[] {
+  const chosen = tones.filter((t) => t && t !== RANDOM_TONE);
+  if (chosen.length === 0) return pickRandom(RANDOM_TONE_POOL, 3);
+  return pickRandom(chosen, 3);
+}
 
 // 依優先順序嘗試的模型清單。免費方案常出現 503「high demand」，
 // 改用多個模型 + 重試退避，避免單一暫時性錯誤直接回傳 500 給顧客。
@@ -44,7 +75,10 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 1.1 },
+            }),
           }
         );
       } catch (e) {
@@ -75,20 +109,26 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
   throw lastError;
 }
 
-// 無 API Key 或 Gemini 全數失敗時的本機備援文案
+// 無 API Key 或 Gemini 全數失敗時的本機備援文案（隨機組合，避免每次內容雷同）
 function mockReviews(formData: ReviewFormData): string[] {
-  const sat =
-    formData.satisfactions.length > 0
-      ? `，尤其是${formData.satisfactions.join('跟')}`
-      : '';
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
   const brandText = formData.brands.join('、');
   const serviceText = formData.services.join('、');
-  const products = formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : serviceText;
-  return [
-    `今天來大師修換${brandText}${formData.model ? ` ${formData.model}` : ''}的${products}${sat}，整體很滿意！${formData.supplement ?? ''}`,
-    `第一次拿${brandText}來大師修體驗${serviceText}（處理了${products}），店員服務態度很好，推薦給大家。${formData.supplement ?? ''}`,
-    `感謝大師修幫我處理${products}${sat}，${formData.supplement || '下次手機有問題還會想來這裡修！'}`,
+  const products =
+    formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : serviceText;
+  const sat =
+    formData.satisfactions.length > 0 ? pick(formData.satisfactions) : '整體服務';
+  const extra = formData.supplement ? formData.supplement.trim() : '';
+
+  const templates = [
+    () => `${brandText}的${products}出問題，抱著試試看的心情來大師修，${sat}讓我很安心，推薦給大家。`,
+    () => `朋友推薦來這裡處理${products}，店員講解得很清楚，${sat}真的加分，下次還會再來。`,
+    () => `原本擔心${products}會修很久，結果很快就處理好了，${sat}讓人放心，謝謝大師修。`,
+    () => `第一次來大師修${serviceText}，${sat}給我很好的感受，師傅專業又有耐心。`,
+    () => `${products}交給大師修處理很放心，過程透明、${sat}，整體體驗很棒。`,
+    () => `感謝工程師幫我處理${brandText}的${products}，${sat}，有需要維修會再回來。`,
   ];
+  return pickRandom(templates, 3).map((t) => (t() + (extra ? extra : '')).trim());
 }
 
 export async function generateReviews(formData: ReviewFormData): Promise<string[]> {
@@ -108,14 +148,16 @@ export async function generateReviews(formData: ReviewFormData): Promise<string[
     formData.repairProducts.length > 0 ? formData.repairProducts.join('、') : '無特別指定';
 
   const servicesText = formData.services.join('、');
-  const tonesText = formData.tones.join('、');
+  const assignedTones = assignTones(formData.tones);
+  const tonesText = assignedTones.map((t, i) => `第 ${i + 1} 則：${t}`).join('\n');
 
   const userPrompt = `
 服務項目：${servicesText}
 今天維修的產品/部位：${repairProductsText}
 手機品牌與型號：${brandsText}
 最滿意的地方：${satisfactionsText}
-想要的評論語氣：${tonesText}
+三則評論的指定語氣（請依序對應）：
+${tonesText}
 補充一句話：${supplementText}
 `;
 
